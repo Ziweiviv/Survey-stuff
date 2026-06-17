@@ -69,6 +69,7 @@ padding: 18px;
 border-right: 1px solid #1f2937;
 }
 
+/* sidebar buttons */
 .side-btn {
 display: block;
 padding: 10px;
@@ -156,7 +157,7 @@ min-height: 18px;
 <div>
 <div class="brand">The Enrichment Zone</div>
 <div class="subtitle">Student Success Measurement powered by Vivian</div>
-<div class="small">Click a year and question to explore survey insights</div>
+<div class="small">Click a year, question, or programme to explore insights</div>
 </div>
 
 <div class="top-buttons">
@@ -171,8 +172,19 @@ min-height: 18px;
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-<div class="side-btn active" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
+
+<!-- PROGRAMMES -->
+<div class="side-btn active" onclick="setProgramme('all',this)">All Programmes</div>
+<div class="side-btn" onclick="setProgramme('tkam',this)">TKAM</div>
+<div class="side-btn" onclick="setProgramme('oi',this)">Outstanding Impact</div>
+<div class="side-btn" onclick="setProgramme('unilife',this)">UniLife</div>
+
+<hr style="border:1px solid #1f2937; margin:10px 0;">
+
+<!-- QUESTIONS -->
+<div class="side-btn" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
 <div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
+
 </div>
 
 <!-- MAIN -->
@@ -214,6 +226,7 @@ Click a segment to see programme breakdown
 let yearData = {};
 let currentYear = "2026";
 let currentQ = "Q3";
+let currentProgramme = "all";
 
 let mainChart;
 let breakChart = null;
@@ -225,15 +238,11 @@ async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-/* DEFAULT */
 const defaultYearBtn = document.querySelectorAll(".top-buttons a")[1];
-const defaultQBtn = document.querySelectorAll(".side-btn")[0];
 
 document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 
 setYear("2026", defaultYearBtn);
-setQuestion("Q3", defaultQBtn);
 
 updateContextLine();
 renderChart();
@@ -244,13 +253,21 @@ function getLabels(){
 return Object.keys(yearData[currentYear][currentQ]);
 }
 
-/* VALUES */
+/* VALUES (PROGRAMME FILTER APPLIED) */
 function getValues(){
-return getLabels().map(k =>
-yearData[currentYear][currentQ][k].oi +
-yearData[currentYear][currentQ][k].tkam +
-yearData[currentYear][currentQ][k].unilife
-);
+
+const labels = getLabels();
+
+return labels.map(k => {
+
+const d = yearData[currentYear][currentQ][k];
+
+if(currentProgramme === "tkam") return d.tkam;
+if(currentProgramme === "oi") return d.oi;
+if(currentProgramme === "unilife") return d.unilife;
+
+return d.tkam + d.oi + d.unilife;
+});
 }
 
 /* MAIN CHART */
@@ -362,15 +379,35 @@ currentQ === "Q3"
 ? "Question: How well does the programme support you in your journey at UC?"
 : "Question: How much does the programme help you feel more confident in your ability to succeed at UC?";
 
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+document.querySelectorAll(".sidebar .side-btn").forEach(b=>{
+if(b.innerText.includes("impact") || b.innerText.includes("support")){
+b.classList.remove("active");
+}
+});
+
 if(el) el.classList.add("active");
 
 document.getElementById("emptyState").style.display="block";
 document.getElementById("breakChart").style.display="none";
-
 document.getElementById("selectedLabel").innerText = "";
 
 updateContextLine();
+renderChart();
+}
+
+/* PROGRAMME FILTER */
+function setProgramme(p,el){
+
+currentProgramme = p;
+
+document.querySelectorAll(".sidebar .side-btn").forEach(b=>{
+if(b.innerText.includes("Programme") || b.innerText.includes("Impact") || b.innerText.includes("Support") || b.innerText.includes("All")){
+b.classList.remove("active");
+}
+});
+
+if(el) el.classList.add("active");
+
 renderChart();
 }
 
