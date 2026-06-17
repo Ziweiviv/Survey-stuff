@@ -96,7 +96,6 @@ font-size: 1.2rem;
 margin-bottom: 4px;
 }
 
-/* CONTEXT */
 .context {
 color: #facc15;
 font-size: 0.85rem;
@@ -104,14 +103,12 @@ font-weight: 600;
 margin-bottom: 12px;
 }
 
-/* GRID */
 .grid {
 display: grid;
 grid-template-columns: 1fr 1fr;
 gap: 20px;
 }
 
-/* CARD */
 .card {
 background: #111827;
 border: 1px solid #1f2937;
@@ -137,109 +134,45 @@ text-align: center;
 min-height: 18px;
 }
 
-/* MOBILE */
-@media (max-width: 768px) {
-
-.container {
-flex-direction: column;
-}
-
-.sidebar {
-width: 100%;
-min-height: auto;
-padding: 12px;
-display: flex;
-flex-wrap: wrap;
-gap: 8px;
-}
-
-.side-btn {
-flex: 1 1 calc(50% - 8px);
-margin-bottom: 0;
-text-align: center;
-}
-
-.topbar {
-flex-direction: column;
-align-items: flex-start;
-gap: 10px;
-}
-
-.top-buttons {
-width: 100%;
-justify-content: flex-start;
-}
-
-.grid {
-grid-template-columns: 1fr;
-}
-
-.card {
-min-height: 280px;
-padding: 12px;
-}
-
-canvas {
-height: 240px !important;
-}
-}
 </style>
 </head>
 
 <body>
 
-<!-- TOP BAR -->
 <div class="topbar">
 
 <div>
 <div class="brand">The Enrichment Zone</div>
 <div class="subtitle">Student Success Measurement powered by Vivian</div>
-<div class="small">Click a year and question to explore survey insights</div>
+<div class="small">Click year or programme (only one active at a time)</div>
 </div>
 
 <div class="top-buttons">
 <a href="#" onclick="setYear('2025',this)">2025 S1</a>
 <a href="#" onclick="setYear('2026',this)">2026 S1</a>
+<a href="#" onclick="setProgramme('tkam',this)">TKAM</a>
+<a href="#" onclick="setProgramme('oi',this)">Outstanding Impact</a>
+<a href="#" onclick="setProgramme('unilife',this)">UniLife</a>
 </div>
 
 </div>
 
-<!-- BODY -->
 <div class="container">
 
-<!-- SIDEBAR -->
 <div class="sidebar">
 <div class="side-btn active" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
 <div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
 </div>
 
-<!-- MAIN -->
 <div class="main">
 
 <h1 id="title"></h1>
-
 <div id="contextLine" class="context"></div>
-
-<div class="small">UC Enrichment Programme Survey Analysis</div>
 
 <div class="grid">
 
-<!-- MAIN CHART -->
 <div class="card">
 <canvas id="mainChart"></canvas>
-</div>
-
-<!-- BREAKDOWN -->
-<div class="card">
-
-<div id="emptyState" style="color:#94a3b8;text-align:center;">
-Click a segment to see programme breakdown
-</div>
-
-<div id="selectedLabel"></div>
-
-<canvas id="breakChart" style="display:none;"></canvas>
-
 </div>
 
 </div>
@@ -252,38 +185,42 @@ Click a segment to see programme breakdown
 let yearData = {};
 let currentYear = "2026";
 let currentQ = "Q3";
+let selectedProgramme = null;
 
 let mainChart;
-let breakChart = null;
 
 const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 
-/* LOAD */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-/* DEFAULT */
-const defaultYearBtn = document.querySelectorAll(".top-buttons a")[1];
-const defaultQBtn = document.querySelectorAll(".side-btn")[0];
-
-document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
-
-setYear("2026", defaultYearBtn);
-setQuestion("Q3", defaultQBtn);
-
-updateContextLine();
+setYear("2026", document.querySelectorAll(".top-buttons a")[1]);
+setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
 renderChart();
+updateContext();
 }
 
-/* LABELS */
 function getLabels(){
 return Object.keys(yearData[currentYear][currentQ]);
 }
 
-/* VALUES */
 function getValues(){
+
+// PROGRAMME MODE (ignore year)
+if(selectedProgramme){
+let vals = [];
+for(let y in yearData){
+for(let q in yearData[y]){
+for(let k in yearData[y][q]){
+vals.push(yearData[y][q][k][selectedProgramme]);
+}
+}
+}
+return vals;
+}
+
+// YEAR MODE
 return getLabels().map(k =>
 yearData[currentYear][currentQ][k].oi +
 yearData[currentYear][currentQ][k].tkam +
@@ -291,21 +228,33 @@ yearData[currentYear][currentQ][k].unilife
 );
 }
 
-/* MAIN CHART */
+function getLabelsDynamic(){
+
+if(selectedProgramme){
+let labels = [];
+for(let y in yearData){
+for(let q in yearData[y]){
+for(let k in yearData[y][q]){
+labels.push(`${y} ${q} ${k}`);
+}
+}
+}
+return labels;
+}
+
+return getLabels();
+}
+
 function renderChart(){
 
 const ctx = document.getElementById("mainChart");
 
 if(mainChart) mainChart.destroy();
 
-const labels = getLabels();
-
-document.getElementById("selectedLabel").innerText = "";
-
 mainChart = new Chart(ctx,{
 type:"doughnut",
 data:{
-labels,
+labels:getLabelsDynamic(),
 datasets:[{
 data:getValues(),
 backgroundColor:colors,
@@ -315,118 +264,50 @@ borderWidth:0
 options:{
 responsive:true,
 maintainAspectRatio:false,
-cutout:"65%",
-plugins:{
-legend:{
-position:"bottom",
-labels:{
-color:"#e5e7eb",
-font:{size:14,weight:"600"},
-boxWidth:18,
-padding:16
-}
-}
-},
-onClick:(e,els)=>{
-if(!els.length) return;
-
-const key = labels[els[0].index];
-const d = yearData[currentYear][currentQ][key];
-
-document.getElementById("selectedLabel").innerText =
-"Selected: " + key;
-
-renderBreakdown(d);
-}
+cutout:"65%"
 }
 });
 }
 
-/* BREAKDOWN */
-function renderBreakdown(d){
+function setProgramme(p,el){
 
-document.getElementById("emptyState").style.display="none";
-document.getElementById("breakChart").style.display="block";
+selectedProgramme = p;
 
-if(breakChart) breakChart.destroy();
+// clear year highlight
+document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
 
-breakChart = new Chart(document.getElementById("breakChart"),{
-type:"pie",
-data:{
-labels:[
-"TKAM Programme",
-"Outstanding Impact Programme",
-"UniLife Experience"
-],
-datasets:[{
-data:[d.tkam,d.oi,d.unilife],
-backgroundColor:["#ec4899","#3b82f6","#8b5a2b"]
-}]
-},
-options:{
-responsive:true,
-maintainAspectRatio:false,
-plugins:{
-legend:{
-position:"bottom",
-labels:{ color:"#e5e7eb" }
-}
-}
-}
-});
+renderChart();
+updateContext();
 }
 
-/* CONTEXT */
-function updateContextLine(){
+function setYear(y,el){
 
-const yearLabel = currentYear === "2026" ? "2026 S1" : "2025 S1";
+currentYear = y;
+selectedProgramme = null; // IMPORTANT: disables programme mode
 
-const qLabel =
-currentQ === "Q3"
-? "Self efficacy impact"
-: "Overall support";
+document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
 
-document.getElementById("contextLine").innerText =
-`Now showing ${yearLabel} ${qLabel} Programme breakdown`;
+renderChart();
+updateContext();
 }
 
-/* QUESTION */
 function setQuestion(q,el){
-
 currentQ = q;
-
-document.getElementById("title").innerText =
-currentQ === "Q3"
-? "Question: How well does the programme support you in your journey at UC?"
-: "Question: How much does the programme help you feel more confident in your ability to succeed at UC?";
 
 document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 if(el) el.classList.add("active");
 
-document.getElementById("emptyState").style.display="block";
-document.getElementById("breakChart").style.display="none";
-
-document.getElementById("selectedLabel").innerText = "";
-
-updateContextLine();
 renderChart();
+updateContext();
 }
 
-/* YEAR */
-function setYear(y,el){
-
-currentYear = y;
-
-document.querySelectorAll(".top-buttons a").forEach(btn=>{
-btn.classList.remove("active");
-});
-
-if(el) el.classList.add("active");
-
-document.getElementById("selectedLabel").innerText = "";
-
-updateContextLine();
-renderChart();
+function updateContext(){
+document.getElementById("contextLine").innerText =
+selectedProgramme
+? `Programme view: ${selectedProgramme.toUpperCase()} (all years)`
+: `Year view: ${currentYear} | Question ${currentQ}`;
 }
 
 window.onload = loadData;
