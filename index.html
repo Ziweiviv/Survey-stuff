@@ -20,7 +20,7 @@ color: #e5e7eb;
 .topbar {
 display: flex;
 justify-content: space-between;
-align-items: center;
+align-items: flex-start;
 padding: 14px 20px;
 background: #0f172a;
 border-bottom: 1px solid #1f2937;
@@ -33,6 +33,12 @@ font-size: 12px;
 color: #94a3b8;
 }
 
+.small {
+color: #94a3b8;
+font-size: 0.85rem;
+}
+
+/* TOP BUTTONS */
 .top-buttons a {
 padding: 8px 12px;
 margin-left: 8px;
@@ -52,9 +58,7 @@ font-weight: 700;
 }
 
 /* LAYOUT */
-.container {
-display: flex;
-}
+.container { display: flex; }
 
 /* SIDEBAR */
 .sidebar {
@@ -89,13 +93,15 @@ padding: 20px;
 
 h1 {
 font-size: 1.2rem;
-margin-bottom: 6px;
+margin-bottom: 4px;
 }
 
-.small {
-color: #94a3b8;
+/* CONTEXT LINE */
+.context {
+color: #facc15;
 font-size: 0.85rem;
-margin-bottom: 15px;
+font-weight: 600;
+margin-bottom: 12px;
 }
 
 /* GRID */
@@ -112,7 +118,6 @@ border: 1px solid #1f2937;
 border-radius: 14px;
 padding: 15px;
 height: 340px;
-
 display: flex;
 align-items: center;
 justify-content: center;
@@ -141,12 +146,13 @@ height: 300px !important;
 
 <div>
 <div class="brand">The Enrichment Zone</div>
-<div class="subtitle">Student Success Measurement — Powered by Vivian</div>
+<div class="subtitle">Student Success Measurement powered by Vivian</div>
+<div class="small">Click a year and question to explore programme insights</div>
 </div>
 
 <div class="top-buttons">
 <a href="#" onclick="setYear('2025',this)">2025 S1</a>
-<a href="#" onclick="setYear('2026',this)">2026 S2</a>
+<a href="#" onclick="setYear('2026',this)">2026 S1</a>
 </div>
 
 </div>
@@ -156,16 +162,19 @@ height: 300px !important;
 
 <!-- SIDEBAR -->
 <div class="sidebar">
-
-<div class="side-btn active" onclick="setQuestion('Q3',this)">Self-efficacy impact</div>
+<div class="side-btn active" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
 <div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
-
 </div>
 
 <!-- MAIN -->
 <div class="main">
 
 <h1 id="title"></h1>
+
+<div id="contextLine" class="context">
+Now showing 2026 S1 Self efficacy impact Programme breakdown
+</div>
+
 <div class="small">UC Enrichment Programme Survey Analysis</div>
 
 <div class="grid">
@@ -187,12 +196,9 @@ Click a segment to see programme breakdown
 </div>
 
 </div>
-
 </div>
 
 <script>
-
-/* ================= STATE ================= */
 
 let yearData = {};
 let currentYear = "2026";
@@ -203,19 +209,28 @@ const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 let mainChart;
 let breakChart = null;
 
-/* ================= LOAD JSON ================= */
-
+/* LOAD DATA */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-/* init default */
-setYear("2026", document.querySelectorAll(".top-buttons a")[1]);
-setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
+/* CLEAN INITIAL STATE */
+const defaultYearBtn = document.querySelectorAll(".top-buttons a")[1];
+const defaultQBtn = document.querySelectorAll(".side-btn")[0];
+
+/* REMOVE ALL ACTIVE FIRST */
+document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
+document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+
+/* SET DEFAULT STATE */
+setYear("2026", defaultYearBtn);
+setQuestion("Q3", defaultQBtn);
+
+updateContextLine();
+renderChart();
 }
 
-/* ================= HELPERS ================= */
-
+/* LABELS */
 function getLabels(){
 return Object.keys(yearData[currentYear][currentQ]);
 }
@@ -228,8 +243,7 @@ yearData[currentYear][currentQ][k].unilife
 );
 }
 
-/* ================= MAIN CHART ================= */
-
+/* MAIN CHART */
 function renderChart(){
 
 const ctx = document.getElementById("mainChart");
@@ -275,8 +289,7 @@ renderBreakdown(d);
 });
 }
 
-/* ================= BREAKDOWN ================= */
-
+/* BREAKDOWN */
 function renderBreakdown(d){
 
 const ctx = document.getElementById("breakChart");
@@ -289,7 +302,11 @@ if(breakChart) breakChart.destroy();
 breakChart = new Chart(ctx,{
 type:"pie",
 data:{
-labels:["TKAM","Outstanding Impact","UniLife"],
+labels:[
+"TKAM Programme",
+"Outstanding Impact Programme",
+"UniLife Experience"
+],
 datasets:[{
 data:[d.tkam,d.oi,d.unilife],
 backgroundColor:["#ec4899","#3b82f6","#8b5a2b"],
@@ -314,16 +331,28 @@ padding:16
 });
 }
 
-/* ================= QUESTION ================= */
+/* CONTEXT */
+function updateContextLine(){
+const yearLabel = currentYear === "2026" ? "2026 S1" : "2025 S1";
 
+const qLabel =
+currentQ === "Q3"
+? "Self efficacy impact"
+: "Overall support";
+
+document.getElementById("contextLine").innerText =
+`Now showing ${yearLabel} ${qLabel} Programme breakdown`;
+}
+
+/* QUESTION */
 function setQuestion(q,el){
 
 currentQ = q;
 
 document.getElementById("title").innerText =
-q === "Q3"
-? "Q: How well does the programme support you in your journey at UC?"
-: "Q: How much does the programme help you feel more confident in your ability to succeed at UC?";
+currentQ === "Q3"
+? "Self efficacy impact How well does the programme support your journey at UC"
+: "Overall support How much does the programme help you feel confident at UC";
 
 document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 if(el) el.classList.add("active");
@@ -331,11 +360,11 @@ if(el) el.classList.add("active");
 document.getElementById("emptyState").style.display="block";
 document.getElementById("breakChart").style.display="none";
 
+updateContextLine();
 renderChart();
 }
 
-/* ================= YEAR ================= */
-
+/* YEAR */
 function setYear(y,el){
 
 currentYear = y;
@@ -346,10 +375,9 @@ btn.classList.remove("active");
 
 if(el) el.classList.add("active");
 
+updateContextLine();
 renderChart();
 }
-
-/* INIT */
 
 window.onload = loadData;
 
