@@ -257,79 +257,129 @@ let currentYear = "2026";
 let currentQ = "Q3";
 
 let mainChart;
+let breakChart = null;
 
-const colors = ["#16a34a","#3b82f6","#facc15"];
+const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 
-/* LOAD DATA */
+/* LOAD */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-setYear("2026", document.querySelectorAll(".top-buttons a")[1]);
-setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
+/* DEFAULT */
+const defaultYearBtn = document.querySelectorAll(".top-buttons a")[1];
+const defaultQBtn = document.querySelectorAll(".side-btn")[0];
+
+document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
+document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+
+setYear("2026", defaultYearBtn);
+setQuestion("Q3", defaultQBtn);
 
 updateContextLine();
 renderChart();
 }
 
-/* CORE DATA BUILD */
-function buildProgrammeTotals(){
-
-const programmes = {
-tkam: 0,
-oi: 0,
-unilife: 0
-};
-
-const data = yearData[currentYear][currentQ];
-
-for(let response in data){
-programmes.tkam += data[response].tkam;
-programmes.oi += data[response].oi;
-programmes.unilife += data[response].unilife;
+/* LABELS */
+function getLabels(){
+return Object.keys(yearData[currentYear][currentQ]);
 }
 
-return {
-labels: ["TKAM", "Outstanding Impact", "UniLife"],
-values: [programmes.tkam, programmes.oi, programmes.unilife]
-};
+/* VALUES */
+function getValues(){
+return getLabels().map(k =>
+yearData[currentYear][currentQ][k].oi +
+yearData[currentYear][currentQ][k].tkam +
+yearData[currentYear][currentQ][k].unilife
+);
 }
 
-/* RENDER CHART */
+/* MAIN CHART */
 function renderChart(){
 
 const ctx = document.getElementById("mainChart");
 
 if(mainChart) mainChart.destroy();
 
-const chartData = buildProgrammeTotals();
+const labels = getLabels();
+
+document.getElementById("selectedLabel").innerText = "";
 
 mainChart = new Chart(ctx,{
-type:"bar",
+type:"doughnut",
 data:{
-labels: chartData.labels,
+labels,
 datasets:[{
-data: chartData.values,
-backgroundColor: colors,
-borderWidth: 0
+data:getValues(),
+backgroundColor:colors,
+borderWidth:0
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+cutout:"65%",
+plugins:{
+legend:{
+position:"bottom",
+labels:{
+color:"#e5e7eb",
+font:{size:14,weight:"600"},
+boxWidth:18,
+padding:16
+}
+}
+},
+onClick:(e,els)=>{
+if(!els.length) return;
+
+const key = labels[els[0].index];
+const d = yearData[currentYear][currentQ][key];
+
+document.getElementById("selectedLabel").innerText =
+"Selected: " + key;
+
+renderBreakdown(d);
+}
+}
+});
+}
+
+/* BREAKDOWN */
+function renderBreakdown(d){
+
+document.getElementById("emptyState").style.display="none";
+document.getElementById("breakChart").style.display="block";
+
+if(breakChart) breakChart.destroy();
+
+breakChart = new Chart(document.getElementById("breakChart"),{
+type:"pie",
+data:{
+labels:[
+"TKAM Programme",
+"Outstanding Impact Programme",
+"UniLife Experience"
+],
+datasets:[{
+data:[d.tkam,d.oi,d.unilife],
+backgroundColor:["#ec4899","#3b82f6","#8b5a2b"]
 }]
 },
 options:{
 responsive:true,
 maintainAspectRatio:false,
 plugins:{
-legend:{ display:false }
-},
-scales:{
-y:{
-beginAtZero:true
+legend:{
+position:"bottom",
+labels:{ color:"#e5e7eb" }
 }
 }
 }
 });
 }
 
-/* CONTEXT TEXT */
+/* CONTEXT */
 function updateContextLine(){
 
 const yearLabel = currentYear === "2026" ? "2026 S1" : "2025 S1";
@@ -340,33 +390,51 @@ currentQ === "Q3"
 : "Overall support";
 
 document.getElementById("contextLine").innerText =
-`${yearLabel} | ${qLabel} | Programme comparison`;
+`Now showing ${yearLabel} ${qLabel} Programme breakdown`;
 }
 
-/* YEAR SELECT */
-function setYear(y,el){
-currentYear = y;
-
-document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-if(el) el.classList.add("active");
-
-renderChart();
-updateContextLine();
-}
-
-/* QUESTION SELECT */
+/* QUESTION */
 function setQuestion(q,el){
+
 currentQ = q;
+
+document.getElementById("title").innerText =
+currentQ === "Q3"
+? "Question: How well does the programme support you in your journey at UC?"
+: "Question: How much does the programme help you feel more confident in your ability to succeed at UC?";
 
 document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 if(el) el.classList.add("active");
 
-renderChart();
+document.getElementById("emptyState").style.display="block";
+document.getElementById("breakChart").style.display="none";
+
+document.getElementById("selectedLabel").innerText = "";
+
 updateContextLine();
+renderChart();
+}
+
+/* YEAR */
+function setYear(y,el){
+
+currentYear = y;
+
+document.querySelectorAll(".top-buttons a").forEach(btn=>{
+btn.classList.remove("active");
+});
+
+if(el) el.classList.add("active");
+
+document.getElementById("selectedLabel").innerText = "";
+
+updateContextLine();
+renderChart();
 }
 
 window.onload = loadData;
 
 </script>
+
 </body>
 </html>
