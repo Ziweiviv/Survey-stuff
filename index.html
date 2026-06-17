@@ -256,156 +256,117 @@ let yearData = {};
 let currentYear = "2026";
 let currentQ = "Q3";
 
-let mode = "year"; // "year" or "programme"
-let selectedProgramme = null;
-
 let mainChart;
 
-const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
+const colors = ["#16a34a","#3b82f6","#facc15"];
 
-/* LOAD */
+/* LOAD DATA */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-setYear("2026", document.querySelectorAll(".top-buttons a")[0]);
+setYear("2026", document.querySelectorAll(".top-buttons a")[1]);
 setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
 
 updateContextLine();
 renderChart();
 }
 
-/* LABELS (YEAR MODE) */
-function getYearLabels(){
-return Object.keys(yearData[currentYear][currentQ]);
+/* CORE DATA BUILD */
+function buildProgrammeTotals(){
+
+const programmes = {
+tkam: 0,
+oi: 0,
+unilife: 0
+};
+
+const data = yearData[currentYear][currentQ];
+
+for(let response in data){
+programmes.tkam += data[response].tkam;
+programmes.oi += data[response].oi;
+programmes.unilife += data[response].unilife;
 }
 
-/* VALUES (YEAR MODE) */
-function getYearValues(){
-return getYearLabels().map(k =>
-yearData[currentYear][currentQ][k].oi +
-yearData[currentYear][currentQ][k].tkam +
-yearData[currentYear][currentQ][k].unilife
-);
+return {
+labels: ["TKAM", "Outstanding Impact", "UniLife"],
+values: [programmes.tkam, programmes.oi, programmes.unilife]
+};
 }
 
-/* PROGRAMME ACROSS ALL YEARS */
-function getProgrammeData(){
-
-let labels = [];
-let values = [];
-
-for(let y in yearData){
-for(let q in yearData[y]){
-for(let k in yearData[y][q]){
-labels.push(`${y} ${q} ${k}`);
-values.push(yearData[y][q][k][selectedProgramme]);
-}
-}
-}
-
-return { labels, values };
-}
-
-/* MAIN CHART */
+/* RENDER CHART */
 function renderChart(){
 
 const ctx = document.getElementById("mainChart");
 
 if(mainChart) mainChart.destroy();
 
-let labels, values;
-
-if(mode === "programme" && selectedProgramme){
-const data = getProgrammeData();
-labels = data.labels;
-values = data.values;
-} else {
-labels = getYearLabels();
-values = getYearValues();
-}
+const chartData = buildProgrammeTotals();
 
 mainChart = new Chart(ctx,{
-type:"doughnut",
+type:"bar",
 data:{
-labels,
+labels: chartData.labels,
 datasets:[{
-data:values,
-backgroundColor:colors,
-borderWidth:0
+data: chartData.values,
+backgroundColor: colors,
+borderWidth: 0
 }]
 },
 options:{
 responsive:true,
 maintainAspectRatio:false,
-cutout:"65%"
+plugins:{
+legend:{ display:false }
+},
+scales:{
+y:{
+beginAtZero:true
+}
+}
 }
 });
-}
-
-/* TOGGLE MODE (AUTO HANDLED BY TOP BUTTONS) */
-
-/* YEAR BUTTON */
-function setYear(y,el){
-
-mode = "year";
-selectedProgramme = null;
-
-currentYear = y;
-
-document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-if(el) el.classList.add("active");
-
-updateContextLine();
-renderChart();
-}
-
-/* PROGRAMME BUTTON */
-function setProgramme(p,el){
-
-mode = "programme";
-selectedProgramme = p;
-
-document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-if(el) el.classList.add("active");
-
-updateContextLine();
-renderChart();
-}
-
-/* QUESTION */
-function setQuestion(q,el){
-
-currentQ = q;
-
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
-if(el) el.classList.add("active");
-
-updateContextLine();
-renderChart();
 }
 
 /* CONTEXT TEXT */
 function updateContextLine(){
 
-let modeText = mode === "year"
-? `Year View: ${currentYear}`
-: `Programme View: ${selectedProgramme?.toUpperCase()}`;
+const yearLabel = currentYear === "2026" ? "2026 S1" : "2025 S1";
 
-let qText =
+const qLabel =
 currentQ === "Q3"
 ? "Self efficacy impact"
 : "Overall support";
 
 document.getElementById("contextLine").innerText =
-`${modeText} | ${qText}`;
+`${yearLabel} | ${qLabel} | Programme comparison`;
+}
+
+/* YEAR SELECT */
+function setYear(y,el){
+currentYear = y;
+
+document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
+
+renderChart();
+updateContextLine();
+}
+
+/* QUESTION SELECT */
+function setQuestion(q,el){
+currentQ = q;
+
+document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
+
+renderChart();
+updateContextLine();
 }
 
 window.onload = loadData;
 
 </script>
-
-</script>
-
 </body>
 </html>
