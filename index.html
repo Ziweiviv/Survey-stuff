@@ -41,6 +41,14 @@ border-radius: 8px;
 color: white;
 text-decoration: none;
 font-size: 13px;
+cursor: pointer;
+transition: 0.2s;
+}
+
+.top-buttons a.active {
+background: #22c55e;
+color: black;
+font-weight: 700;
 }
 
 /* LAYOUT */
@@ -110,7 +118,6 @@ align-items: center;
 justify-content: center;
 }
 
-/* CANVAS */
 canvas {
 width: 100% !important;
 height: 300px !important;
@@ -121,6 +128,7 @@ height: 300px !important;
 .container{flex-direction:column;}
 .sidebar{width:100%;}
 .grid{grid-template-columns:1fr;}
+.card{height:auto;min-height:320px;}
 }
 
 </style>
@@ -133,12 +141,12 @@ height: 300px !important;
 
 <div>
 <div class="brand">The Enrichment Zone</div>
-<div class="subtitle">Student Success Measurement - Powered by Vivian</div>
+<div class="subtitle">Student Success Measurement — Powered by Vivian</div>
 </div>
 
 <div class="top-buttons">
-<a href="#" onclick="setYear('2025S1')">2025 S1</a>
-<a href="#" onclick="setYear('2026S2')">2026 S1</a>
+<a href="#" onclick="setYear('2025',this)">2025 S1</a>
+<a href="#" onclick="setYear('2026',this)">2026 S2</a>
 </div>
 
 </div>
@@ -162,12 +170,10 @@ height: 300px !important;
 
 <div class="grid">
 
-<!-- MAIN CHART -->
 <div class="card">
 <canvas id="mainChart"></canvas>
 </div>
 
-<!-- BREAKDOWN -->
 <div class="card">
 
 <div id="emptyState" style="color:#94a3b8;text-align:center;">
@@ -186,34 +192,27 @@ Click a segment to see programme breakdown
 
 <script>
 
-/* ================= DATA ================= */
+/* ================= STATE ================= */
 
-const dataset = {
-Q3: {
-"Extremely well": { oi:2, tkam:12, unilife:8 },
-"Very well": { oi:8, tkam:12, unilife:23 },
-"Moderately well": { oi:11, tkam:5, unilife:17 },
-"Slightly well": { oi:0, tkam:0, unilife:6 },
-"Not well at all": { oi:0, tkam:0, unilife:2 }
-},
-Q4: {
-"A great deal": { oi:1, tkam:8, unilife:3 },
-"A lot": { oi:7, tkam:13, unilife:17 },
-"A moderate amount": { oi:9, tkam:7, unilife:25 },
-"A little": { oi:4, tkam:1, unilife:8 },
-"None at all": { oi:0, tkam:0, unilife:3 }
-}
-};
-
-const yearData = {
-"2025S1": dataset,
-"2026S2": dataset
-};
+let yearData = {};
+let currentYear = "2026";
+let currentQ = "Q3";
 
 const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 
-let currentQ = "Q3";
-let currentYear = "2026S2";
+let mainChart;
+let breakChart = null;
+
+/* ================= LOAD JSON ================= */
+
+async function loadData(){
+const res = await fetch("./data.json");
+yearData = await res.json();
+
+/* init default */
+setYear("2026", document.querySelectorAll(".top-buttons a")[1]);
+setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
+}
 
 /* ================= HELPERS ================= */
 
@@ -229,51 +228,7 @@ yearData[currentYear][currentQ][k].unilife
 );
 }
 
-/* ================= BREAKDOWN (FIXED CLEAN VERSION) ================= */
-
-let breakChart = null;
-
-function renderBreakdown(d){
-
-const ctx = document.getElementById("breakChart");
-
-document.getElementById("emptyState").style.display="none";
-ctx.style.display="block";
-
-/* destroy old instance (IMPORTANT FIX) */
-if(breakChart) breakChart.destroy();
-
-breakChart = new Chart(ctx,{
-type:"pie",
-data:{
-labels:["TKAM","Outstanding Impact","UniLife"],
-datasets:[{
-data:[d.oi,d.tkam,d.unilife],
-backgroundColor:["#ec4899","#3b82f6","#8b5a2b"],
-borderWidth:0
-}]
-},
-options:{
-responsive:true,
-maintainAspectRatio:false,
-plugins:{
-legend:{
-position:"bottom",
-labels:{
-color:"#e5e7eb",
-font:{size:14,weight:"600"},
-boxWidth:18,
-padding:16
-}
-}
-}
-}
-});
-}
-
 /* ================= MAIN CHART ================= */
-
-let mainChart;
 
 function renderChart(){
 
@@ -320,7 +275,46 @@ renderBreakdown(d);
 });
 }
 
-/* ================= QUESTION SWITCH ================= */
+/* ================= BREAKDOWN ================= */
+
+function renderBreakdown(d){
+
+const ctx = document.getElementById("breakChart");
+
+document.getElementById("emptyState").style.display="none";
+ctx.style.display="block";
+
+if(breakChart) breakChart.destroy();
+
+breakChart = new Chart(ctx,{
+type:"pie",
+data:{
+labels:["TKAM","Outstanding Impact","UniLife"],
+datasets:[{
+data:[d.tkam,d.oi,d.unilife],
+backgroundColor:["#ec4899","#3b82f6","#8b5a2b"],
+borderWidth:0
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+legend:{
+position:"bottom",
+labels:{
+color:"#e5e7eb",
+font:{size:14,weight:"600"},
+boxWidth:18,
+padding:16
+}
+}
+}
+}
+});
+}
+
+/* ================= QUESTION ================= */
 
 function setQuestion(q,el){
 
@@ -340,17 +334,24 @@ document.getElementById("breakChart").style.display="none";
 renderChart();
 }
 
-/* ================= YEAR SWITCH ================= */
+/* ================= YEAR ================= */
 
-function setYear(y){
+function setYear(y,el){
+
 currentYear = y;
+
+document.querySelectorAll(".top-buttons a").forEach(btn=>{
+btn.classList.remove("active");
+});
+
+if(el) el.classList.add("active");
+
 renderChart();
 }
 
 /* INIT */
-window.onload = () => {
-setQuestion("Q3");
-};
+
+window.onload = loadData;
 
 </script>
 
