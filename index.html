@@ -119,37 +119,14 @@ border-radius: 14px;
 padding: 15px;
 height: 340px;
 display: flex;
-flex-direction: column;
 align-items: center;
 justify-content: center;
+flex-direction: column;
 }
 
 canvas {
 width: 100% !important;
-height: 260px !important;
-}
-
-/* BREAK HEADER */
-#breakHeader {
-margin-bottom: 10px;
-text-align: center;
-}
-
-#clickedLabel {
-color: #facc15;
-font-weight: 700;
-margin-bottom: 6px;
-}
-
-/* BUTTON */
-button {
-padding: 6px 10px;
-border-radius: 8px;
-border: none;
-background: #1f2937;
-color: white;
-cursor: pointer;
-font-size: 12px;
+height: 300px !important;
 }
 
 /* MOBILE */
@@ -158,6 +135,13 @@ font-size: 12px;
 .sidebar{width:100%;}
 .grid{grid-template-columns:1fr;}
 .card{height:auto;min-height:320px;}
+}
+
+#selectedLabel {
+color: #facc15;
+font-weight: 700;
+margin-bottom: 8px;
+text-align: center;
 }
 
 </style>
@@ -215,13 +199,7 @@ Now showing 2026 S1 Self efficacy impact Programme breakdown
 Click a segment to see programme breakdown
 </div>
 
-<div id="breakHeader">
-<div id="clickedLabel"></div>
-
-<button onclick="toggleBreakdown()">
-Show all data
-</button>
-</div>
+<div id="selectedLabel"></div>
 
 <canvas id="breakChart" style="display:none;"></canvas>
 
@@ -241,12 +219,9 @@ let currentQ = "Q3";
 let mainChart;
 let breakChart = null;
 
-let lastBreakData = null;
-let showingAll = false;
-
 const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 
-/* LOAD */
+/* LOAD DATA */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
@@ -319,7 +294,8 @@ if(!els.length) return;
 const key = labels[els[0].index];
 const d = yearData[currentYear][currentQ][key];
 
-document.getElementById("clickedLabel").innerText =
+/* 🔥 ONLY ADDITION: SHOW SELECTED LABEL */
+document.getElementById("selectedLabel").innerText =
 "Selected: " + key;
 
 renderBreakdown(d);
@@ -331,35 +307,22 @@ renderBreakdown(d);
 /* BREAKDOWN */
 function renderBreakdown(d){
 
-lastBreakData = d;
-showingAll = false;
-
 document.getElementById("emptyState").style.display="none";
 document.getElementById("breakChart").style.display="block";
 
-drawBreakdown(d);
-}
-
-/* DRAW */
-function drawBreakdown(d){
-
 if(breakChart) breakChart.destroy();
-
-const data = showingAll
-? [d.tkam + d.oi + d.unilife, d.tkam, d.oi, d.unilife]
-: [d.tkam, d.oi, d.unilife];
-
-const labels = showingAll
-? ["All combined","TKAM","Outstanding Impact","UniLife"]
-: ["TKAM","Outstanding Impact","UniLife"];
 
 breakChart = new Chart(document.getElementById("breakChart"),{
 type:"pie",
 data:{
-labels,
+labels:[
+"TKAM Programme",
+"Outstanding Impact Programme",
+"UniLife Experience"
+],
 datasets:[{
-data,
-backgroundColor:["#facc15","#ec4899","#3b82f6","#8b5a2b"]
+data:[d.tkam,d.oi,d.unilife],
+backgroundColor:["#ec4899","#3b82f6","#8b5a2b"]
 }]
 },
 options:{
@@ -375,19 +338,6 @@ color:"#e5e7eb"
 }
 }
 });
-}
-
-/* TOGGLE */
-function toggleBreakdown(){
-
-if(!lastBreakData) return;
-
-showingAll = !showingAll;
-
-document.querySelector("#breakHeader button").innerText =
-showingAll ? "Show selected only" : "Show all data";
-
-drawBreakdown(lastBreakData);
 }
 
 /* CONTEXT */
