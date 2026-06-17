@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Enrichment Zone</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body {
+margin: 0;
+font-family: system-ui;
+background: #0b1220;
+color: #e5e7eb;
+}
+
+/* TOP BAR */
+.topbar {
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+padding: 14px 20px;
+background: #0f172a;
+border-bottom: 1px solid #1f2937;
+}
+
+.brand { font-weight: 700; }
+
+.subtitle {
+font-size: 12px;
+color: #94a3b8;
+}
+
+.small {
+color: #94a3b8;
+font-size: 0.85rem;
+}
+
+/* MODE BLOCK */
+.mode-wrap{
+display:flex;
+flex-direction:column;
+align-items:flex-end;
+gap:6px;
+}
+
+/* BUTTONS */
+.top-buttons a {
+padding: 8px 12px;
+margin-left: 8px;
+background: #1f2937;
+border-radius: 8px;
+color: white;
+text-decoration: none;
+font-size: 13px;
+cursor: pointer;
+transition: 0.2s;
+}
+
+.top-buttons a.active {
+background: #22c55e;
+color: black;
+font-weight: 700;
+}
+
+/* MODE BUTTON */
+.mode-btn {
+padding: 8px 12px;
+background: #334155;
+border-radius: 8px;
+cursor: pointer;
+font-size: 13px;
+color: white;
+}
+
+.mode-btn:hover {
+background: #475569;
+}
+
+/* LAYOUT */
+.container { display: flex; }
+
+/* SIDEBAR */
+.sidebar {
+width: 220px;
+background: #0f172a;
+height: calc(100vh - 60px);
+padding: 18px;
+border-right: 1px solid #1f2937;
+}
+
+.side-btn {
+display: block;
+padding: 10px;
+margin-bottom: 8px;
+background: #1f2937;
+border-radius: 8px;
+cursor: pointer;
+font-size: 13px;
+}
+
+.side-btn.active {
+background: #22c55e;
+color: black;
+font-weight: 600;
+}
+
+/* MAIN */
+.main {
+flex: 1;
+padding: 20px;
+}
+
+h1 {
+font-size: 1.2rem;
+margin-bottom: 4px;
+}
+
+/* CONTEXT */
+.context {
+color: #facc15;
+font-size: 0.85rem;
+font-weight: 600;
+margin-bottom: 12px;
+}
+
+/* GRID */
+.grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 20px;
+}
+
+/* CARD */
+.card {
+background: #111827;
+border: 1px solid #1f2937;
+border-radius: 14px;
+padding: 15px;
+height: 340px;
+display: flex;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+}
+
+canvas {
+width: 100% !important;
+height: 300px !important;
+}
+
+#selectedLabel {
+color: #facc15;
+font-weight: 700;
+margin-bottom: 8px;
+text-align: center;
+min-height: 18px;
+}
+
+/* MOBILE */
+@media (max-width: 768px) {
+
+.container { flex-direction: column; }
+
+.sidebar {
+width: 100%;
+min-height: auto;
+padding: 12px;
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+}
+
+.side-btn {
+flex: 1 1 calc(50% - 8px);
+margin-bottom: 0;
+text-align: center;
+}
+
+.topbar {
+flex-direction: column;
+align-items: flex-start;
+gap: 10px;
+}
+
+.grid {
+grid-template-columns: 1fr;
+}
+
+.card {
+min-height: 280px;
+padding: 12px;
+}
+
+canvas {
+height: 240px !important;
+}
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+
+<div>
+<div class="brand">The Enrichment Zone</div>
+<div class="subtitle">Student Success Measurement powered by Vivian</div>
+<div class="small">Click mode + question to explore insights</div>
+</div>
+
+<!-- MODE + PROGRAMMES -->
+<div style="display:flex;align-items:center;gap:12px;">
+
+<div class="mode-wrap">
+
+<div id="modeBtn" class="mode-btn" onclick="toggleMode()">
+Switch to Year Mode
+</div>
+
+<div id="modeLabel" class="small">
+You are in Programme Mode
+</div>
+
+</div>
+
+<div class="top-buttons">
+<a href="#" onclick="setProgramme('tkam',this)">TKAM</a>
+<a href="#" onclick="setProgramme('oi',this)">Outstanding Impact</a>
+<a href="#" onclick="setProgramme('unilife',this)">UniLife</a>
+</div>
+
+</div>
+
+</div>
+
+<!-- BODY -->
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+<div class="side-btn active" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
+<div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 id="title"></h1>
+<div id="contextLine" class="context"></div>
+
+<div class="small">UC Enrichment Programme Survey Analysis</div>
+
+<div class="grid">
+
+<div class="card">
+<canvas id="mainChart"></canvas>
+</div>
+
+<div class="card">
+
+<div id="emptyState" style="color:#94a3b8;text-align:center;">
+Click a segment to see breakdown
+</div>
+
+<div id="selectedLabel"></div>
+
+<canvas id="breakChart" style="display:none;"></canvas>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+let yearData = {};
+let currentYear = "2026";
+let currentQ = "Q3";
+let currentProgramme = "all";
+let viewMode = "programme";
+
+let mainChart;
+let breakChart = null;
+
+const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
+
+async function loadData(){
+const res = await fetch("./data.json");
+yearData = await res.json();
+
+document.getElementById("modeLabel").innerText =
+"You are in Programme Mode";
+
+setQuestion("Q3", document.querySelectorAll(".side-btn")[0]);
+renderChart();
+}
+
+function toggleMode(){
+
+viewMode = viewMode === "programme" ? "year" : "programme";
+
+const btn = document.getElementById("modeBtn");
+const label = document.getElementById("modeLabel");
+
+if(viewMode === "programme"){
+btn.innerText = "Switch to Year Mode";
+label.innerText = "You are in Programme Mode";
+} else {
+btn.innerText = "Switch to Programme Mode";
+label.innerText = "You are in Year Mode";
+}
+
+renderChart();
+}
+
+/* LABELS */
+function getLabels(){
+return Object.keys(yearData[currentYear][currentQ]);
+}
+
+/* VALUES */
+function getValues(){
+
+if(viewMode === "programme"){
+return getLabels().map(k=>{
+let d = yearData[currentYear][currentQ][k];
+
+if(currentProgramme === "tkam") return d.tkam;
+if(currentProgramme === "oi") return d.oi;
+if(currentProgramme === "unilife") return d.unilife;
+
+return d.tkam + d.oi + d.unilife;
+});
+}
+
+/* YEAR MODE */
+let years = ["2025","2026"];
+
+return years.map(y=>{
+let sum = 0;
+Object.values(yearData[y][currentQ]).forEach(d=>{
+sum += d.tkam + d.oi + d.unilife;
+});
+return sum;
+});
+}
+
+/* CHART */
+function renderChart(){
+
+const ctx = document.getElementById("mainChart");
+if(mainChart) mainChart.destroy();
+
+let labels = viewMode === "programme"
+? getLabels()
+: ["2025","2026"];
+
+mainChart = new Chart(ctx,{
+type: viewMode === "programme" ? "doughnut" : "bar",
+data:{
+labels,
+datasets:[{
+data:getValues(),
+backgroundColor:colors
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+cutout: viewMode === "programme" ? "65%" : 0,
+plugins:{ legend:{ display:false } }
+}
+});
+}
+
+function setQuestion(q,el){
+currentQ = q;
+document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
+renderChart();
+}
+
+function setProgramme(p,el){
+currentProgramme = p;
+document.querySelectorAll(".top-buttons a").forEach(a=>a.classList.remove("active"));
+if(el) el.classList.add("active");
+renderChart();
+}
+
+window.onload = loadData;
+
+</script>
+
+</body>
+</html>
