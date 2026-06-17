@@ -1,0 +1,17 @@
+{
+  "Q3": {
+    "Extremely well": { "oi": 2, "tkam": 12, "unilife": 8 },
+    "Very well": { "oi": 8, "tkam": 12, "unilife": 23 },
+    "Moderately well": { "oi": 11, "tkam": 5, "unilife": 17 },
+    "Slightly well": { "oi": 0, "tkam": 0, "unilife": 6 },
+    "Not well at all": { "oi": 0, "tkam": 0, "unilife": 2 }
+  },
+
+  "Q4": {
+    "A great deal": { "oi": 1, "tkam": 8, "unilife": 3 },
+    "A lot": { "oi": 7, "tkam": 13, "unilife": 17 },
+    "A moderate amount": { "oi": 9, "tkam": 7, "unilife": 25 },
+    "A little": { "oi": 4, "tkam": 1, "unilife": 8 },
+    "None at all": { "oi": 0, "tkam": 0, "unilife": 3 }
+  }
+}

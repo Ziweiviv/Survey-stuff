@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>The Enrichment Zone</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+body {
+margin: 0;
+font-family: system-ui;
+background: #0b1220;
+color: #e5e7eb;
+}
+
+/* TOP BAR */
+.topbar {
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 14px 20px;
+background: #0f172a;
+border-bottom: 1px solid #1f2937;
+}
+
+.brand { font-weight: 700; }
+
+.subtitle {
+font-size: 12px;
+color: #94a3b8;
+}
+
+.top-buttons a {
+padding: 8px 12px;
+margin-left: 8px;
+background: #1f2937;
+border-radius: 8px;
+color: white;
+text-decoration: none;
+font-size: 13px;
+}
+
+/* LAYOUT */
+.container {
+display: flex;
+}
+
+/* SIDEBAR */
+.sidebar {
+width: 220px;
+background: #0f172a;
+height: calc(100vh - 60px);
+padding: 18px;
+border-right: 1px solid #1f2937;
+}
+
+.side-btn {
+display: block;
+padding: 10px;
+margin-bottom: 8px;
+background: #1f2937;
+border-radius: 8px;
+cursor: pointer;
+font-size: 13px;
+}
+
+.side-btn.active {
+background: #22c55e;
+color: black;
+font-weight: 600;
+}
+
+/* MAIN */
+.main {
+flex: 1;
+padding: 20px;
+}
+
+h1 {
+font-size: 1.2rem;
+margin-bottom: 6px;
+}
+
+.small {
+color: #94a3b8;
+font-size: 0.85rem;
+margin-bottom: 15px;
+}
+
+/* GRID */
+.grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 20px;
+}
+
+/* CARD */
+.card {
+background: #111827;
+border: 1px solid #1f2937;
+border-radius: 14px;
+padding: 15px;
+height: 340px;
+
+display: flex;
+align-items: center;
+justify-content: center;
+}
+
+/* CANVAS */
+canvas {
+width: 100% !important;
+height: 300px !important;
+}
+
+/* MOBILE */
+@media(max-width:768px){
+.container{flex-direction:column;}
+.sidebar{width:100%;}
+.grid{grid-template-columns:1fr;}
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+
+<div>
+<div class="brand">The Enrichment Zone</div>
+<div class="subtitle">Student Success Measurement - Powered by Vivian</div>
+</div>
+
+<div class="top-buttons">
+<a href="#" onclick="setYear('2025S1')">2025 S1</a>
+<a href="#" onclick="setYear('2026S2')">2026 S1</a>
+</div>
+
+</div>
+
+<!-- BODY -->
+<div class="container">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+<div class="side-btn active" onclick="setQuestion('Q3',this)">Self-efficacy impact</div>
+<div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1 id="title"></h1>
+<div class="small">UC Enrichment Programme Survey Analysis</div>
+
+<div class="grid">
+
+<!-- MAIN CHART -->
+<div class="card">
+<canvas id="mainChart"></canvas>
+</div>
+
+<!-- BREAKDOWN -->
+<div class="card">
+
+<div id="emptyState" style="color:#94a3b8;text-align:center;">
+Click a segment to see programme breakdown
+</div>
+
+<canvas id="breakChart" style="display:none;"></canvas>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+
+/* ================= DATA ================= */
+
+const dataset = {
+Q3: {
+"Extremely well": { oi:2, tkam:12, unilife:8 },
+"Very well": { oi:8, tkam:12, unilife:23 },
+"Moderately well": { oi:11, tkam:5, unilife:17 },
+"Slightly well": { oi:0, tkam:0, unilife:6 },
+"Not well at all": { oi:0, tkam:0, unilife:2 }
+},
+Q4: {
+"A great deal": { oi:1, tkam:8, unilife:3 },
+"A lot": { oi:7, tkam:13, unilife:17 },
+"A moderate amount": { oi:9, tkam:7, unilife:25 },
+"A little": { oi:4, tkam:1, unilife:8 },
+"None at all": { oi:0, tkam:0, unilife:3 }
+}
+};
+
+const yearData = {
+"2025S1": dataset,
+"2026S2": dataset
+};
+
+const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
+
+let currentQ = "Q3";
+let currentYear = "2026S2";
+
+/* ================= HELPERS ================= */
+
+function getLabels(){
+return Object.keys(yearData[currentYear][currentQ]);
+}
+
+function getValues(){
+return getLabels().map(k =>
+yearData[currentYear][currentQ][k].oi +
+yearData[currentYear][currentQ][k].tkam +
+yearData[currentYear][currentQ][k].unilife
+);
+}
+
+/* ================= BREAKDOWN (FIXED CLEAN VERSION) ================= */
+
+let breakChart = null;
+
+function renderBreakdown(d){
+
+const ctx = document.getElementById("breakChart");
+
+document.getElementById("emptyState").style.display="none";
+ctx.style.display="block";
+
+/* destroy old instance (IMPORTANT FIX) */
+if(breakChart) breakChart.destroy();
+
+breakChart = new Chart(ctx,{
+type:"pie",
+data:{
+labels:["TKAM","Outstanding Impact","UniLife"],
+datasets:[{
+data:[d.oi,d.tkam,d.unilife],
+backgroundColor:["#ec4899","#3b82f6","#8b5a2b"],
+borderWidth:0
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+plugins:{
+legend:{
+position:"bottom",
+labels:{
+color:"#e5e7eb",
+font:{size:14,weight:"600"},
+boxWidth:18,
+padding:16
+}
+}
+}
+}
+});
+}
+
+/* ================= MAIN CHART ================= */
+
+let mainChart;
+
+function renderChart(){
+
+const ctx = document.getElementById("mainChart");
+
+if(mainChart) mainChart.destroy();
+
+const labels = getLabels();
+
+mainChart = new Chart(ctx,{
+type:"doughnut",
+data:{
+labels,
+datasets:[{
+data:getValues(),
+backgroundColor:colors,
+borderWidth:0
+}]
+},
+options:{
+responsive:true,
+maintainAspectRatio:false,
+cutout:"65%",
+plugins:{
+legend:{
+position:"bottom",
+labels:{
+color:"#e5e7eb",
+font:{size:14,weight:"600"},
+boxWidth:18,
+padding:16
+}
+}
+},
+onClick:(e,els)=>{
+if(!els.length) return;
+
+const key = labels[els[0].index];
+const d = yearData[currentYear][currentQ][key];
+
+renderBreakdown(d);
+}
+}
+});
+}
+
+/* ================= QUESTION SWITCH ================= */
+
+function setQuestion(q,el){
+
+currentQ = q;
+
+document.getElementById("title").innerText =
+q === "Q3"
+? "Q: How well does the programme support you in your journey at UC?"
+: "Q: How much does the programme help you feel more confident in your ability to succeed at UC?";
+
+document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+if(el) el.classList.add("active");
+
+document.getElementById("emptyState").style.display="block";
+document.getElementById("breakChart").style.display="none";
+
+renderChart();
+}
+
+/* ================= YEAR SWITCH ================= */
+
+function setYear(y){
+currentYear = y;
+renderChart();
+}
+
+/* INIT */
+window.onload = () => {
+setQuestion("Q3");
+};
+
+</script>
+
+</body>
+</html>
