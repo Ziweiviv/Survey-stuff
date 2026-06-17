@@ -129,19 +129,20 @@ width: 100% !important;
 height: 300px !important;
 }
 
+#selectedLabel {
+color: #facc15;
+font-weight: 700;
+margin-bottom: 8px;
+text-align: center;
+min-height: 18px;
+}
+
 /* MOBILE */
 @media(max-width:768px){
 .container{flex-direction:column;}
 .sidebar{width:100%;}
 .grid{grid-template-columns:1fr;}
 .card{height:auto;min-height:320px;}
-}
-
-#selectedLabel {
-color: #facc15;
-font-weight: 700;
-margin-bottom: 8px;
-text-align: center;
 }
 
 </style>
@@ -179,9 +180,7 @@ text-align: center;
 
 <h1 id="title"></h1>
 
-<div id="contextLine" class="context">
-Now showing 2026 S1 Self efficacy impact Programme breakdown
-</div>
+<div id="contextLine" class="context"></div>
 
 <div class="small">UC Enrichment Programme Survey Analysis</div>
 
@@ -221,7 +220,7 @@ let breakChart = null;
 
 const colors = ["#16a34a","#84cc16","#facc15","#fb923c","#ef4444"];
 
-/* LOAD DATA */
+/* LOAD */
 async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
@@ -263,6 +262,8 @@ if(mainChart) mainChart.destroy();
 
 const labels = getLabels();
 
+document.getElementById("selectedLabel").innerText = "";
+
 mainChart = new Chart(ctx,{
 type:"doughnut",
 data:{
@@ -294,7 +295,6 @@ if(!els.length) return;
 const key = labels[els[0].index];
 const d = yearData[currentYear][currentQ][key];
 
-/* 🔥 ONLY ADDITION: SHOW SELECTED LABEL */
 document.getElementById("selectedLabel").innerText =
 "Selected: " + key;
 
@@ -331,9 +331,7 @@ maintainAspectRatio:false,
 plugins:{
 legend:{
 position:"bottom",
-labels:{
-color:"#e5e7eb"
-}
+labels:{ color:"#e5e7eb" }
 }
 }
 }
@@ -342,6 +340,7 @@ color:"#e5e7eb"
 
 /* CONTEXT */
 function updateContextLine(){
+
 const yearLabel = currentYear === "2026" ? "2026 S1" : "2025 S1";
 
 const qLabel =
@@ -361,13 +360,15 @@ currentQ = q;
 document.getElementById("title").innerText =
 currentQ === "Q3"
 ? "Question: How well does the programme support you in your journey at UC?"
-: "Question: How much does the programme help you feel more confident in your ability to succeed at UC? ";
+: "Question: How much does the programme help you feel more confident in your ability to succeed at UC?";
 
 document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 if(el) el.classList.add("active");
 
 document.getElementById("emptyState").style.display="block";
 document.getElementById("breakChart").style.display="none";
+
+document.getElementById("selectedLabel").innerText = "";
 
 updateContextLine();
 renderChart();
@@ -383,6 +384,8 @@ btn.classList.remove("active");
 });
 
 if(el) el.classList.add("active");
+
+document.getElementById("selectedLabel").innerText = "";
 
 updateContextLine();
 renderChart();
