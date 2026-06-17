@@ -183,6 +183,7 @@ canvas {
 height: 240px !important;
 }
 }
+
 </style>
 </head>
 
@@ -209,8 +210,17 @@ height: 240px !important;
 
 <!-- SIDEBAR -->
 <div class="sidebar">
+
+<!-- NEW OPTIONAL MODE -->
+<div class="side-btn active" onclick="setMode('default',this)">Year View</div>
+<div class="side-btn" onclick="setMode('programme',this)">Programme View</div>
+
+<hr style="border:1px solid #1f2937; margin:10px 0;">
+
+<!-- QUESTIONS -->
 <div class="side-btn active" onclick="setQuestion('Q3',this)">Self efficacy impact</div>
 <div class="side-btn" onclick="setQuestion('Q4',this)">Overall support</div>
+
 </div>
 
 <!-- MAIN -->
@@ -224,12 +234,10 @@ height: 240px !important;
 
 <div class="grid">
 
-<!-- MAIN CHART -->
 <div class="card">
 <canvas id="mainChart"></canvas>
 </div>
 
-<!-- BREAKDOWN -->
 <div class="card">
 
 <div id="emptyState" style="color:#94a3b8;text-align:center;">
@@ -253,6 +261,9 @@ let yearData = {};
 let currentYear = "2026";
 let currentQ = "Q3";
 
+let viewMode = "default";
+let currentProgramme = "tkam";
+
 let mainChart;
 let breakChart = null;
 
@@ -263,12 +274,11 @@ async function loadData(){
 const res = await fetch("./data.json");
 yearData = await res.json();
 
-/* DEFAULT */
 const defaultYearBtn = document.querySelectorAll(".top-buttons a")[1];
-const defaultQBtn = document.querySelectorAll(".side-btn")[0];
+const defaultQBtn = document.querySelectorAll(".sidebar .side-btn")[2];
 
 document.querySelectorAll(".top-buttons a").forEach(b=>b.classList.remove("active"));
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
+document.querySelectorAll(".sidebar .side-btn").forEach(b=>b.classList.remove("active"));
 
 setYear("2026", defaultYearBtn);
 setQuestion("Q3", defaultQBtn);
@@ -277,21 +287,79 @@ updateContextLine();
 renderChart();
 }
 
+/* MODE SWITCH */
+function setMode(mode, el){
+
+viewMode = mode;
+
+document.querySelectorAll(".sidebar .side-btn").forEach(b=>{
+b.classList.remove("active");
+});
+
+if(el) el.classList.add("active");
+
+renderChart();
+}
+
+/* QUESTION */
+function setQuestion(q,el){
+
+currentQ = q;
+
+document.querySelectorAll(".sidebar .side-btn").forEach(b=>{
+if(b.innerText.includes("impact") || b.innerText.includes("support")){
+b.classList.remove("active");
+}
+});
+
+if(el) el.classList.add("active");
+
+renderChart();
+}
+
 /* LABELS */
 function getLabels(){
+
+if(viewMode === "programme"){
+return ["2025 S1","2026 S1"];
+}
+
 return Object.keys(yearData[currentYear][currentQ]);
 }
 
 /* VALUES */
 function getValues(){
-return getLabels().map(k =>
+
+if(viewMode === "programme"){
+
+const years = ["2025","2026"];
+
+return years.map(y => {
+
+const group = yearData[y][currentQ];
+
+let total = 0;
+
+Object.keys(group).forEach(k => {
+const d = group[k];
+
+if(currentProgramme === "tkam") total += d.tkam;
+if(currentProgramme === "oi") total += d.oi;
+if(currentProgramme === "unilife") total += d.unilife;
+});
+
+return total;
+});
+}
+
+return Object.keys(yearData[currentYear][currentQ]).map(k =>
 yearData[currentYear][currentQ][k].oi +
 yearData[currentYear][currentQ][k].tkam +
 yearData[currentYear][currentQ][k].unilife
 );
 }
 
-/* MAIN CHART */
+/* CHART */
 function renderChart(){
 
 const ctx = document.getElementById("mainChart");
@@ -308,8 +376,7 @@ data:{
 labels,
 datasets:[{
 data:getValues(),
-backgroundColor:colors,
-borderWidth:0
+backgroundColor:colors
 }]
 },
 options:{
@@ -318,58 +385,7 @@ maintainAspectRatio:false,
 cutout:"65%",
 plugins:{
 legend:{
-position:"bottom",
-labels:{
-color:"#e5e7eb",
-font:{size:14,weight:"600"},
-boxWidth:18,
-padding:16
-}
-}
-},
-onClick:(e,els)=>{
-if(!els.length) return;
-
-const key = labels[els[0].index];
-const d = yearData[currentYear][currentQ][key];
-
-document.getElementById("selectedLabel").innerText =
-"Selected: " + key;
-
-renderBreakdown(d);
-}
-}
-});
-}
-
-/* BREAKDOWN */
-function renderBreakdown(d){
-
-document.getElementById("emptyState").style.display="none";
-document.getElementById("breakChart").style.display="block";
-
-if(breakChart) breakChart.destroy();
-
-breakChart = new Chart(document.getElementById("breakChart"),{
-type:"pie",
-data:{
-labels:[
-"TKAM Programme",
-"Outstanding Impact Programme",
-"UniLife Experience"
-],
-datasets:[{
-data:[d.tkam,d.oi,d.unilife],
-backgroundColor:["#ec4899","#3b82f6","#8b5a2b"]
-}]
-},
-options:{
-responsive:true,
-maintainAspectRatio:false,
-plugins:{
-legend:{
-position:"bottom",
-labels:{ color:"#e5e7eb" }
+position:"bottom"
 }
 }
 }
@@ -386,47 +402,13 @@ currentQ === "Q3"
 ? "Self efficacy impact"
 : "Overall support";
 
+const modeLabel =
+viewMode === "programme"
+? "Programme comparison"
+: "Year view";
+
 document.getElementById("contextLine").innerText =
-`Now showing ${yearLabel} ${qLabel} Programme breakdown`;
-}
-
-/* QUESTION */
-function setQuestion(q,el){
-
-currentQ = q;
-
-document.getElementById("title").innerText =
-currentQ === "Q3"
-? "Question: How well does the programme support you in your journey at UC?"
-: "Question: How much does the programme help you feel more confident in your ability to succeed at UC?";
-
-document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
-if(el) el.classList.add("active");
-
-document.getElementById("emptyState").style.display="block";
-document.getElementById("breakChart").style.display="none";
-
-document.getElementById("selectedLabel").innerText = "";
-
-updateContextLine();
-renderChart();
-}
-
-/* YEAR */
-function setYear(y,el){
-
-currentYear = y;
-
-document.querySelectorAll(".top-buttons a").forEach(btn=>{
-btn.classList.remove("active");
-});
-
-if(el) el.classList.add("active");
-
-document.getElementById("selectedLabel").innerText = "";
-
-updateContextLine();
-renderChart();
+`${modeLabel} — ${yearLabel} ${qLabel}`;
 }
 
 window.onload = loadData;
