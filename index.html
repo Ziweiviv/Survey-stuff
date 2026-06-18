@@ -271,7 +271,9 @@ min-height: 18px;
 <div id="contextLine" class="context"></div>
 
 <div class="small">UC Enrichment Programme Survey Analysis</div>
-
+<div id="cohortSummary"
+style="margin-top:6px;font-size:12px;color:#94a3b8;">
+</div>
 <div class="grid">
 
 <!-- MAIN CHART -->
@@ -397,16 +399,24 @@ renderBreakdown(d);
 /* BREAKDOWN */
 function renderBreakdown(d){
 
+/* RESET OLD STATE FIRST */
 document.getElementById("emptyState").style.display="none";
 document.getElementById("breakChart").style.display="block";
+document.getElementById("breakdownNote").innerHTML = "";
+document.getElementById("selectedLabel").innerText = "";
 
-if(breakChart) breakChart.destroy();
+/* destroy safely */
+if(breakChart){
+breakChart.destroy();
+breakChart = null;
+}
 
-const total = d.tkam + d.oi + d.unilife;
+/* safe totals */
+const total = (d.tkam || 0) + (d.oi || 0) + (d.unilife || 0);
 
-const tkamPct = ((d.tkam / total) * 100).toFixed(1);
-const oiPct = ((d.oi / total) * 100).toFixed(1);
-const uniPct = ((d.unilife / total) * 100).toFixed(1);
+const tkamPct = total ? ((d.tkam / total) * 100).toFixed(1) : 0;
+const oiPct = total ? ((d.oi / total) * 100).toFixed(1) : 0;
+const uniPct = total ? ((d.unilife / total) * 100).toFixed(1) : 0;
 
 document.getElementById("breakdownNote").innerHTML =
 `
@@ -490,6 +500,18 @@ function setQuestion(q,el){
 
 currentQ = q;
 
+/* FULL RESET */
+document.getElementById("breakdownNote").innerHTML = "";
+document.getElementById("selectedLabel").innerText = "";
+document.getElementById("emptyState").style.display="block";
+document.getElementById("breakChart").style.display="none";
+
+/* destroy old chart */
+if(breakChart){
+breakChart.destroy();
+breakChart = null;
+}
+
 document.getElementById("title").innerText =
 currentQ === "Q3"
 ? "Question: How well does the programme support you in your journey at UC?"
@@ -497,11 +519,6 @@ currentQ === "Q3"
 
 document.querySelectorAll(".side-btn").forEach(b=>b.classList.remove("active"));
 if(el) el.classList.add("active");
-
-document.getElementById("emptyState").style.display="block";
-document.getElementById("breakChart").style.display="none";
-
-document.getElementById("selectedLabel").innerText = "";
 
 updateContextLine();
 renderChart();
@@ -512,13 +529,23 @@ function setYear(y,el){
 
 currentYear = y;
 
+/* RESET BREAKDOWN */
+document.getElementById("breakdownNote").innerHTML = "";
+document.getElementById("selectedLabel").innerText = "";
+document.getElementById("emptyState").style.display="block";
+document.getElementById("breakChart").style.display="none";
+
+/* destroy chart safely */
+if(breakChart){
+breakChart.destroy();
+breakChart = null;
+}
+
 document.querySelectorAll(".top-buttons a").forEach(btn=>{
 btn.classList.remove("active");
 });
 
 if(el) el.classList.add("active");
-
-document.getElementById("selectedLabel").innerText = "";
 
 updateContextLine();
 renderChart();
