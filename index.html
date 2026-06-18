@@ -239,7 +239,7 @@ min-height: 18px;
 <div class="topbar">
 
 <div>
-<div class="brand">The Enrichment Zone</div>
+<div class="brand">Survey Says</div>
 <div class="subtitle">Student Success Measurement powered by Vivian</div>
 <div class="small">Click a year and question to explore survey insights</div>
 </div>
@@ -287,7 +287,9 @@ Click a segment to see programme breakdown
 </div>
 
 <div id="selectedLabel"></div>
-
+<div id="breakdownNote"
+style="font-size:12px;color:#94a3b8;text-align:center;margin-bottom:8px;">
+</div>
 <canvas id="breakChart" style="display:none;"></canvas>
 
 </div>
@@ -400,17 +402,41 @@ document.getElementById("breakChart").style.display="block";
 
 if(breakChart) breakChart.destroy();
 
+const total = d.tkam + d.oi + d.unilife;
+
+const tkamPct = ((d.tkam / total) * 100).toFixed(1);
+const oiPct = ((d.oi / total) * 100).toFixed(1);
+const uniPct = ((d.unilife / total) * 100).toFixed(1);
+
+document.getElementById("breakdownNote").innerHTML =
+`
+TKAM: ${tkamPct}% • Outstanding Impact: ${oiPct}% • UniLife: ${uniPct}%<br>
+<span style="font-size:11px">
+Share of respondents selecting this response category
+</span>
+`;
+
 breakChart = new Chart(document.getElementById("breakChart"),{
-type:"pie",
+type:"bar",
 data:{
 labels:[
-"TKAM Programme",
-"Outstanding Impact Programme",
-"UniLife Experience"
+"TKAM",
+"Outstanding Impact",
+"UniLife"
 ],
 datasets:[{
-data:[d.tkam,d.oi,d.unilife],
-backgroundColor:["#ec4899","#3b82f6","#8b5a2b"]
+label:"Number of respondents",
+data:[
+d.tkam,
+d.oi,
+d.unilife
+],
+backgroundColor:[
+"#ec4899",
+"#3b82f6",
+"#8b5a2b"
+],
+borderRadius:8
 }]
 },
 options:{
@@ -418,8 +444,27 @@ responsive:true,
 maintainAspectRatio:false,
 plugins:{
 legend:{
-position:"bottom",
-labels:{ color:"#e5e7eb" }
+display:false
+}
+},
+scales:{
+x:{
+ticks:{
+color:"#e5e7eb"
+},
+grid:{
+display:false
+}
+},
+y:{
+beginAtZero:true,
+ticks:{
+color:"#e5e7eb",
+precision:0
+},
+grid:{
+color:"#1f2937"
+}
 }
 }
 }
